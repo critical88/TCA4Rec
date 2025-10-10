@@ -1,0 +1,9 @@
+*.pt
+checkpoints/*
+__pycache__
+logs/*
+*.out
+log/*
+sasrec/log/*
+sasrec/logs/*
+./data/*cache.csv
