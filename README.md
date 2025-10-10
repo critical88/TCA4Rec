@@ -55,7 +55,7 @@ You can start training with:
 CUDA_VISIBLE_DEVICES=0 nohup python -u main.py \
   --dataset Toys_and_Games \
   --model llm4rec \
-  --use_msl > game_tca4rec_msl.out 2>&1 &
+  --use_msl --alpha 0.1 > game_tca4rec_msl.out 2>&1 &
 ```
 ## ⏱️ Training & Evaluation Time
 
