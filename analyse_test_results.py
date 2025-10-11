@@ -6,7 +6,7 @@ import torch
 import pandas as pd
 from tqdm import tqdm
 import sys
-sys.path.append('/data/linfake/llm/llm_code')
+
 from models.backbone.SASRec import SASRec
 
 
@@ -326,7 +326,7 @@ def main():
     
     args = parser.parse_args()
     
-    data_path= f"/data2/linfake/data/processed_10_k_core=5/{args.dataset}"
+    data_path= f"./data/{args.dataset}"
     # Load test results
     print(f"Loading test results from {args.checkpoint}")
     test_results = load_test_results(args.checkpoint)
