@@ -1,16 +1,9 @@
 import torch
-import transformers
-from transformers import AutoConfig, AutoTokenizer
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 import os
-import random
-import numpy as np
 import pandas as pd
-import jsonlines
 import json
-from collections import defaultdict
-import math
 
 
 class TrainCollater:
@@ -107,6 +100,8 @@ Then the movie that user is most likely to watch is:
         output_ids = []
         if self.train:
             output_ids = self.tokenizer(output)['input_ids']
+            if self.tokenizer.bos_token_id is not None and output_ids[0] != self.tokenizer.bos_token_id:
+                output_ids = [self.tokenizer.bos_token_id] + output_ids
         elif self.tokenizer.bos_token_id is not None:
             output_ids = [self.tokenizer.bos_token_id]
 

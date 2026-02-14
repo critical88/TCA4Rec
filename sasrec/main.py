@@ -11,7 +11,7 @@ import torch
 
 from tqdm import tqdm
 import copy
-import nni
+# import nni
 
 from model import SASRec
 import world
@@ -26,6 +26,7 @@ from torch.utils.data import DataLoader
 if not "NNI_PLATFORM" in os.environ:
     os.environ["CUDA_VISIBLE_DEVICES"] = world.config["cuda"]
 else:
+    import nni
     optimized_params = nni.get_next_parameter()
     world.config.update(optimized_params)
 

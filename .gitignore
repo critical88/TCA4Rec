@@ -7,3 +7,5 @@ log/*
 sasrec/log/*
 sasrec/logs/*
 ./data/*cache.csv
+.vscode/*
+*.whl

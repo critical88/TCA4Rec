@@ -15,6 +15,8 @@ transformers==4.51.3
 pytorch-lightning==2.5.0.post0
 peft==0.15.2
 torch_scatter==2.1.2+pt25cu118
+pandas==2.3.3
+scikit-learn==1.6.1
 ```
 ## 📂 Data Preparation
 
@@ -34,7 +36,7 @@ For quick reproduction, we also provide three preprocessed datasets under the ./
 For ease of integration, we provide a reference implementation of SASRec.
 ```bash
 cd sasrec
-python -u main.py --dataset Toys_and_Games --model SASRec --cuda:0
+python -u main.py --dataset Toys_and_Games --model SASRec --cuda 0
 ```
 
 After training, the best checkpoint will be automatically saved at:

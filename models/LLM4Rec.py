@@ -261,6 +261,7 @@ class LLM4Rec(LightningModule):
         inputs_embs = self.wrap_embs(input_ids, user_idx, hist_id)
         decoder_outputs = self.model(inputs_embeds=inputs_embs, attention_mask=attention_mask)
         logits = decoder_outputs.logits
+        logits = logits.float()  # Convert logits to float32 for stability
 
         user_embs = self.cf_model.get_user_embs(user_idx, hist_id).to(inputs_embs.dtype)
         item_embs = self.cf_model.get_item_embs(torch.arange(self.n_item + 1).to(device)).to(inputs_embs.dtype)
@@ -357,6 +358,7 @@ class LLM4Rec(LightningModule):
         soft_labels = (1 - alpha) * one_hot_labels + alpha * normalized_cf_logits
         
         tau = self.tau
+        shift_logits = shift_logits - shift_logits.max(dim=-1, keepdim=True).values  # For numerical stabilitys
         all_logits = torch.exp(shift_logits / tau)
         pos_loss = -torch.log((all_logits * soft_labels).sum(dim=-1))
         neg_loss = torch.log(all_logits.sum(dim=-1))
