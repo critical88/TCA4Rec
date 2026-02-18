@@ -31,7 +31,7 @@ python -u preprocess.py --dataset Toys_and_Games
 
 For quick reproduction, we also provide three preprocessed datasets under the ./data/ directory.
 
-## ⚙️ Running CF Models
+## 🤖 Running CF Models
 
 For ease of integration, we provide a reference implementation of SASRec.
 ```bash
@@ -48,6 +48,20 @@ Please move this checkpoint to the following path before running TCA4Rec:
 
 > cf_model/sasrec/Toys_and_Games.pt
 
+To make it easier for everyone to reproduce the performance results, I have provided the trained weights file `Toys_and_Games.pt`. You only need to run TCA4Rec.
+
+## ⚙️ LLM Configuration
+Please modify the `model_dict` mapping in the `main.py` function.
+```python
+model_dict = {
+    "llama3": "xxxx",
+    "llama3-3b": "xxxx",
+    "llama2": "xxxx",
+    "qwen0.5B": "xxxx",
+    "qwen1.5B": "xxxx",
+}
+```
+
 ## 🚀 Running TCA4Rec
 
 Before launching TCA4Rec, ensure that both the **CF model** and **LLM model** are correctly prepared and placed in the designated directories.
@@ -59,6 +73,22 @@ CUDA_VISIBLE_DEVICES=0 nohup python -u main.py \
   --model llm4rec \
   --use_msl --alpha 0.1 > game_tca4rec_msl.out 2>&1 &
 ```
+
+
+## 🛠️ Issues
+
+### 1. Training crashes with `NaN` and missing `libnvrtc.so.11.2`
+
+Thanks to @hupeiyu21 for identifying and resolving this issue.
+
+**Cause:**  
+A CUDA version mismatch between `scatter` and `torch`.
+
+**Solution:**  
+Please ensure that both `scatter` and `torch` are installed with matching CUDA versions.
+
+For more details, see [Issue #1](https://github.com/critical88/TCA4Rec/issues/1).
+
 ## ⏱️ Training & Evaluation Time
 
 Using `Llama-3.2-3B` on an `NVIDIA RTX A6000`, the runtime is approximately:
@@ -70,10 +100,11 @@ Using `Llama-3.2-3B` on an `NVIDIA RTX A6000`, the runtime is approximately:
 <!-- ## 📘 Citation
 
 If you find this work useful, please consider citing our paper:
-
+```
 @article{tca4rec2025,
   title={Token-level Collaborative Alignment for LLM-based Generative Recommendation},
   author={...},
   year={2025},
   journal={...}
-} -->
+}
+``` -->
