@@ -138,7 +138,7 @@ def main(args):
                 model.load_state_dict(ckpt['state_dict'], strict=False)
             trainer.test(model, datamodule)
     else:
-        ckpt = torch.load(args.ckpt_path, map_location='cpu')
+        ckpt = torch.load(args.ckpt_path, map_location='cpu', weights_only=False)
         model.load_state_dict(ckpt['state_dict'], strict=False)
         trainer = Trainer(
             max_epochs=args.epoch,
