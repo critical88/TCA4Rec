@@ -134,7 +134,7 @@ def main(args):
             if trainer.checkpoint_callback and trainer.checkpoint_callback.best_model_path:
                 ckpt_path = trainer.checkpoint_callback.best_model_path
                 args.ckpt_path = ckpt_path
-                ckpt = torch.load(ckpt_path, map_location='cpu')
+                ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=False)
                 model.load_state_dict(ckpt['state_dict'], strict=False)
             trainer.test(model, datamodule)
     else:
