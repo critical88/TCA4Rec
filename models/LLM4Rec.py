@@ -13,6 +13,7 @@ from collections import defaultdict
 import torch.distributed as dist
 from utils.metrics import *
 
+
 from peft import (  # noqa: E402
     LoraConfig,
     get_peft_model,
@@ -170,10 +171,9 @@ class LLM4Rec(LightningModule):
         self.tau = args.tau
 
         ### llm model
-        self.model = AutoModelForCausalLM.from_pretrained (
+        self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
-            torch_dtype=torch.bfloat16,
-            device_map={"": int(os.environ.get("LOCAL_RANK") or 0)})
+            torch_dtype=torch.bfloat16)
 
         self.tokenizer = tokenizer 
         self.vocab_size = self.model.config.vocab_size
@@ -388,7 +388,7 @@ class LLM4Rec(LightningModule):
                 inputs_embeds[i][input_ids[i] == self.item_token_id] = all_item_embs[i][-row_seq_len:]
         return inputs_embeds
 
-    def generate(self, input_ids, user_id, hist_id, attention_mask, temperature=0.8, do_sample=False, num_beams=5, max_gen_length=64, min_gen_length=1, repetition_penalty=1.0, length_penalty=1.0, num_return_sequences=20):
+    def generate(self, input_ids, user_id, hist_id, attention_mask, temperature=1.0, do_sample=False, num_beams=5, max_gen_length=64, min_gen_length=1, repetition_penalty=1.0, length_penalty=1.0, num_return_sequences=20):
         
         if num_beams == 1 and not do_sample and num_return_sequences > 1:
             num_beams = num_return_sequences
@@ -435,6 +435,7 @@ class LLM4Rec(LightningModule):
             inputs_embeds=inputs_embs,
             attention_mask=attention_mask,
             temperature=temperature,
+            top_p=1.0,
             do_sample=do_sample,
             num_beams=num_beams,
             max_new_tokens=max_gen_length,
@@ -546,15 +547,17 @@ class LLM4Rec(LightningModule):
             attention_mask=batch['attention_mask'],
             num_beams = max(self.valid_Ks)
         )
-        
+
         # Store the ground truth and generated results for metric calculation
+        idx = batch['data_idx']
         for i, (target_id, gen_title) in enumerate(zip(batch['title_idx'], generated_titles)):
             self.val_info.append({
                 'target_id': target_id.item(),
                 'generated_title': gen_title,
-                'user_id': batch['user_idx'][i].item()
+                'user_id': batch['user_idx'][i].item(),
+                'data_idx': idx[i].item()
             })
-        
+
         return {}
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
@@ -625,40 +628,72 @@ class LLM4Rec(LightningModule):
 
     def on_validation_epoch_end(self):
         Ks = self.valid_Ks
-        
+
+        # Gather results from all GPUs
+        if dist.is_initialized():
+            all_val_info = [None] * dist.get_world_size()
+            dist.all_gather_object(all_val_info, self.val_info)
+            gathered_info = [item for sublist in all_val_info for item in sublist]
+            # Deduplicate by data_idx (DistributedSampler may replicate samples)
+            seen = set()
+            deduped = []
+            for item in gathered_info:
+                if item['data_idx'] not in seen:
+                    seen.add(item['data_idx'])
+                    deduped.append(item)
+            gathered_info = deduped
+        else:
+            gathered_info = self.val_info
+
         # Calculate metrics
-        metrics = self.calculate_metrics(self.val_info, Ks)
-        
+        metrics = self.calculate_metrics(gathered_info, Ks)
+
         # Log metrics
         for i, K in enumerate(Ks):
             self.log(f"val_hit@{K}", metrics['hit_ratio'][i], prog_bar=True, sync_dist=True)
-        
+
         # Clear validation info
         self.val_info.clear()
-        
+
         return metrics
 
     def on_test_epoch_end(self):
-        # Calculate and save metrics
+        # Gather results from all GPUs
         Ks = self.test_Ks
-        metrics = self.calculate_metrics(self.val_info, Ks)
-        
-        # Create results dictionary
-        results = {
-            'metrics': metrics,
-            'raw_predictions': {row['data_idx']: row for row in self.val_info}
-        }
-        
-        # Save results to JSON file
-        output_path = os.path.join(self.args.dirpath, f"{self.args.dataset}_{self.args.llm_model}_test_results.json")
-        with open(output_path, 'w') as f:
-            json.dump(results, f, indent=4)
-        
+
+        if dist.is_initialized():
+            all_val_info = [None] * dist.get_world_size()
+            dist.all_gather_object(all_val_info, self.val_info)
+            gathered_info = [item for sublist in all_val_info for item in sublist]
+            # Deduplicate by data_idx (DistributedSampler may replicate samples)
+            seen = set()
+            deduped = []
+            for item in gathered_info:
+                if item['data_idx'] not in seen:
+                    seen.add(item['data_idx'])
+                    deduped.append(item)
+            gathered_info = deduped
+        else:
+            gathered_info = self.val_info
+
+        # Calculate and save metrics
+        metrics = self.calculate_metrics(gathered_info, Ks)
+
+        # Only save file on rank 0
+        if not dist.is_initialized() or dist.get_rank() == 0:
+            results = {
+                'metrics': metrics,
+                'raw_predictions': {row['data_idx']: row for row in gathered_info}
+            }
+            output_path = os.path.join(self.args.dirpath, f"{self.args.dataset}_{self.args.llm_model}_test_results.json")
+            with open(output_path, 'w') as f:
+                json.dump(results, f, indent=4)
+
         # Log metrics
         for i, K in enumerate(Ks):
             self.log(f"test_ndcg@{K}", metrics['ndcg'][i], prog_bar=True, sync_dist=True)
             self.log(f"test_hit@{K}", metrics['hit_ratio'][i], prog_bar=True, sync_dist=True)
-        
+
         # Clear test info
         self.val_info.clear()
         return metrics

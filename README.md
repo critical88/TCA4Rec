@@ -4,6 +4,12 @@ Official **PyTorch** implementation of our work **TCA4Rec** — *Token-level Col
 
 ---
 
+
+## 🔄 Update
+
+**2026/06/09** — Support multi-GPU training and evaluation (`--num_gpus N`)
+
+
 ## 📦 Environment
 
 The experiments are conducted under the following environment:
@@ -97,14 +103,15 @@ Using `Llama-3.2-3B` on an `NVIDIA RTX A6000`, the runtime is approximately:
 
 - **Evaluation**: ~30 minutes per round
 
-<!-- ## 📘 Citation
+## 📘 Citation
 
 If you find this work useful, please consider citing our paper:
 ```
-@article{tca4rec2025,
+@inproceedings{lin2026token,
   title={Token-level Collaborative Alignment for LLM-based Generative Recommendation},
-  author={...},
-  year={2025},
-  journal={...}
+  author={Lin, Fake and Hu, Binbin and Zheng, Zhi and Zhu, Xi and Liu, Ziqi and Zhang, Zhiqiang and Zhou, Jun and Xu, Tong},
+  booktitle={Proceedings of the ACM Web Conference 2026},
+  pages={6909--6919},
+  year={2026}
 }
-``` -->
+```

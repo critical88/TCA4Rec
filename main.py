@@ -3,6 +3,7 @@
 
 import argparse
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import traceback
 from transformers import  AutoTokenizer
 from pytorch_lightning import seed_everything
@@ -109,10 +110,9 @@ def main(args):
 
         trainer = Trainer(
             max_epochs=epoch,
-            # devices=args.num_gpus,
             devices=args.num_gpus,
             accelerator='gpu',
-            # strategy='ddp_find_unused_parameters_true',
+            strategy='ddp' if args.num_gpus > 1 else 'auto',
             num_nodes=args.num_nodes,
             enable_checkpointing=save_model,
             accumulate_grad_batches=gradient_accumulation_steps,
@@ -131,10 +131,11 @@ def main(args):
             trainer.test(model, datamodule)
         else:
             trainer.fit(model, datamodule)
-            ckpt_path = trainer.checkpoint_callback.best_model_path
-            args.ckpt_path = ckpt_path
-            ckpt = torch.load(args.ckpt_path, map_location='cpu')
-            model.load_state_dict(ckpt['state_dict'], strict=False)
+            if trainer.checkpoint_callback and trainer.checkpoint_callback.best_model_path:
+                ckpt_path = trainer.checkpoint_callback.best_model_path
+                args.ckpt_path = ckpt_path
+                ckpt = torch.load(ckpt_path, map_location='cpu')
+                model.load_state_dict(ckpt['state_dict'], strict=False)
             trainer.test(model, datamodule)
     else:
         ckpt = torch.load(args.ckpt_path, map_location='cpu')
@@ -143,7 +144,7 @@ def main(args):
             max_epochs=args.epoch,
             devices=args.num_gpus,
             accelerator='gpu',
-            strategy='ddp',
+            strategy='ddp' if args.num_gpus > 1 else 'auto',
             num_nodes=args.num_nodes,
             enable_checkpointing=True,
             # plugins=plugins,
@@ -228,5 +229,6 @@ parser.add_argument("--sample_num", default=10000, type=int)
 parser.add_argument("--tau", default=4.5, type=float)
 parser.add_argument("--seed", default=42, type=int)
 parser.add_argument("--use_msl", default=False, action="store_true")
-args = parser.parse_args()
-main(args)
+if __name__ == "__main__":
+    args = parser.parse_args()
+    main(args)
